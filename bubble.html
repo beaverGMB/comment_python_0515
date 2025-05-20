@@ -11,30 +11,49 @@
             font-family: 'Noto Sans JP', sans-serif;
         }
 
+        .message-block {
+            position: relative;
+            padding-top: 30px;
+            margin-bottom: 40px;
+        }
+
+        .username {
+            position: absolute;
+            top: 0;
+            right: 20px;
+            font-size: 18px;
+            color: #444;
+            font-weight: bold;
+            text-align: right;
+            user-select: none;
+            background: transparent;
+        }
+
         .bubble {
             position: relative;
-            display: block; /* inline-block から変更 */
+            display: block;
             background: #e0f7fa;
             color: #333;
             font-size: 20px;
             padding: 14px 20px;
-            margin: 12px auto;
+            margin: 0 auto;
             border-radius: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             animation: fadeIn 0.5s ease;
-            word-break: break-word; /* 重要: 日本語対応 */
-            max-width: 90%; /* 横幅広めに調整 */
+            word-break: break-word;
+            max-width: 90%;
             line-height: 1.5;
         }
 
         .bubble::after {
             content: "";
             position: absolute;
-            bottom: -12px;
+            top: -12px;
             right: 30px;
-            border-width: 12px 12px 0 12px;
+            border-width: 0 12px 12px 12px;
             border-style: solid;
-            border-color: #e0f7fa transparent transparent transparent;
+            border-color: transparent transparent #e0f7fa transparent;
+            
         }
     </style>
 </head>
