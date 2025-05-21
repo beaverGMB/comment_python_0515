@@ -30,8 +30,53 @@ TEMPLATE_HTML = """
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">  <!-- スマホ対応追加 -->
     <title>コメント送信フォーム</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 10px;
+            margin: 0;
+            font-size: 16px;
+            background-color: #f9f9f9;
+        }
+
+        input, select, button {
+            font-size: 1em;
+            padding: 0.5em;
+            margin: 0.3em 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        form {
+            margin-top: 10px;
+        }
+
+        h2 {
+            font-size: 1.2em;
+        }
+
+        ul {
+            padding-left: 1em;
+            list-style-type: none;
+        }
+
+        li {
+            margin-bottom: 0.5em;
+            background: #fff;
+            padding: 0.5em;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .template-select {
+            margin-top: 10px;
+        }
+    </style>
+
     <script>
         const socket = io();
 
@@ -108,9 +153,9 @@ TEMPLATE_HTML = """
             <option value="頑張れー">頑張れー</option>
         </select>
 
-        <form method="POST" action="/comment" style="margin-top:10px;">
+        <form method="POST" action="/comment">
             <input type="hidden" name="name" id="hiddenName">
-            <input type="text" name="msg" id="msg" required style="width:300px;">
+            <input type="text" name="msg" id="msg" required placeholder="コメントを入力">
             <button type="submit">送信</button>
         </form>
 
@@ -135,6 +180,7 @@ TEMPLATE_HTML = """
 </body>
 </html>
 """
+
 
 @socketio.on("connect")
 def handle_connect():
