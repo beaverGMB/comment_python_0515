@@ -7,6 +7,7 @@ import os
 import threading
 import queue
 from flask import Flask, request, render_template_string, redirect, url_for, send_file, make_response
+from flask_socketio import SocketIO, emit
 import pandas as pd
 import io
 from datetime import datetime
@@ -14,28 +15,39 @@ import tkinter.filedialog as filedialog
 from PIL import Image, ImageTk
 from uuid import uuid4
 
+# ==== Flask + SocketIO ====
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 message_queue = queue.Queue()
 message_log = []
-
+messages = []
 server_session_id = str(uuid4())
 
+# ==== HTML テンプレート ====
 TEMPLATE_HTML = """
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <title>コメント送信フォーム</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
-        // クッキー読み込み関数
+        const socket = io();
+
+        socket.on("new_comment", function(data) {
+            const commentList = document.querySelector("ul");
+            const li = document.createElement("li");
+            li.innerHTML = `<strong>${data.name}</strong>: ${data.text}`;
+            commentList.appendChild(li);
+        });
+
         function getCookie(name) {
             let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
             if (match) return decodeURIComponent(match[2]);
             return null;
         }
 
-        // クッキー書き込み関数
         function setCookie(name, value, days) {
             let expires = "";
             if (days) {
@@ -46,7 +58,6 @@ TEMPLATE_HTML = """
             document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
         }
 
-        // 名前をCookieに保存してページリロード
         function saveNameAndReload() {
             const nameInput = document.getElementById("nameInput").value.trim();
             if (nameInput !== "") {
@@ -58,12 +69,10 @@ TEMPLATE_HTML = """
             }
         }
 
-        // 定型文セット
         function setTemplateText(value) {
             document.getElementById('msg').value = value;
         }
 
-        // ページロード時に名前とセッションIDをチェックし、フォーム切り替え
         function loadUsernameToForm() {
             const name = getCookie("username");
             const session = getCookie("session_id");
@@ -100,7 +109,6 @@ TEMPLATE_HTML = """
         </select>
 
         <form method="POST" action="/comment" style="margin-top:10px;">
-            <!-- 名前はhiddenで送信 -->
             <input type="hidden" name="name" id="hiddenName">
             <input type="text" name="msg" id="msg" required style="width:300px;">
             <button type="submit">送信</button>
@@ -128,32 +136,35 @@ TEMPLATE_HTML = """
 </html>
 """
 
-@app.route("/", methods=["GET"])
+@socketio.on("connect")
+def handle_connect():
+    print("接続を確認")
+
+
+@app.route("/")
 def form():
-    # ページ表示時に名前のクッキー情報を反映したフォームを返す
-    resp = make_response(render_template_string(TEMPLATE_HTML, messages=message_log, server_session_id=server_session_id))
-    return resp
+    return render_template_string(TEMPLATE_HTML, messages=message_log, server_session_id=server_session_id)
 
 @app.route("/comment", methods=["POST"])
 def comment():
     msg = request.form.get("msg", "")
-    name = request.form.get("name", "名無し")  # ここでフォームから名前を受け取る
+    name = request.form.get("name", "名無し")
     if msg and name:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         entry = {"name": name, "text": msg, "time": now}
         message_queue.put(entry)
         message_log.append(entry)
+        socketio.emit("new_comment", entry)
         return redirect(url_for("form"))
     return "エラー", 400
 
-@app.route("/download", methods=["GET"])
+@app.route("/download")
 def download_file():
     if not message_log:
         return "データがありません", 404
 
     file_format = request.args.get("format", "xlsx").lower()
     df = pd.DataFrame(message_log)
-    # カラム名を日本語にリネーム
     df.rename(columns={"name": "名前", "text": "コメント", "time": "時刻"}, inplace=True)
     output = io.BytesIO()
 
@@ -178,19 +189,14 @@ def download_file():
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+# ==== Flaskサーバをスレッドで起動 ====
 def run_flask():
-    app.run(port=5000, debug=False, use_reloader=False)
+    socketio.run(app, host="0.0.0.0", port=5000)
 
-# ===== Tkinter GUI =====
+# ==== Tkinter GUI ====
 def set_always_on_top(hwnd):
-    win32gui.SetWindowPos(
-        hwnd,
-        win32con.HWND_TOPMOST,
-        0, 0, 0, 0,
-        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE,
-    )
-
-messages = []
+    win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
+                          win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
 
 def create_menu_window():
     menu_root = tk.Toplevel()
@@ -201,50 +207,23 @@ def create_menu_window():
     def export_file_dialog(format_type):
         df = pd.DataFrame(message_log)
         df.rename(columns={"name": "名前", "text": "コメント", "time": "時刻"}, inplace=True)
-
         filetypes = [("Excelファイル", "*.xlsx")] if format_type == "xlsx" else [("CSVファイル", "*.csv")]
         def_ext = ".xlsx" if format_type == "xlsx" else ".csv"
-
-        filepath = filedialog.asksaveasfilename(
-            title="保存先を選択",
-            defaultextension=def_ext,
-            filetypes=filetypes
-        )
-        if not filepath:
-            return
-
-        try:
-            if format_type == "csv":
-                df.to_csv(filepath, index=False, encoding="utf-8-sig")
-            else:
-                df.to_excel(filepath, index=False)
-        except Exception as e:
-            print(f"保存エラー: {e}")
+        filepath = filedialog.asksaveasfilename(defaultextension=def_ext, filetypes=filetypes)
+        if filepath:
+            try:
+                if format_type == "csv":
+                    df.to_csv(filepath, index=False, encoding="utf-8-sig")
+                else:
+                    df.to_excel(filepath, index=False)
+            except Exception as e:
+                print(f"保存エラー: {e}")
 
     def clear_comments():
         messages.clear()
         message_log.clear()
 
-    def show_qr_code():
-        qr_path = os.path.join(os.path.dirname(__file__), "QR.png")
-        if not os.path.exists(qr_path):
-            print("QR.png が見つかりません")
-            return
-
-        qr_window = tk.Toplevel(menu_root)
-        qr_window.title("QRコード")
-        qr_window.attributes("-topmost", True)
-
-        img = Image.open(qr_path)
-        img = img.resize((200, 200), Image.LANCZOS)
-        photo = ImageTk.PhotoImage(img)
-
-        label = tk.Label(qr_window, image=photo)
-        label.image = photo
-        label.pack(padx=10, pady=10)
-
-    tk.Button(menu_root, text="QRコードを表示", command=show_qr_code).pack(pady=5)
-    tk.Button(menu_root, text="コメント履歴表示（コンソール）", command=lambda: print(message_log)).pack(pady=5)
+    tk.Button(menu_root, text="コメント履歴表示", command=lambda: print(message_log)).pack(pady=5)
     tk.Button(menu_root, text="コメント履歴クリア", command=clear_comments).pack(pady=5)
     tk.Button(menu_root, text="CSV形式で保存", command=lambda: export_file_dialog("csv")).pack(pady=5)
     tk.Button(menu_root, text="Excel形式で保存", command=lambda: export_file_dialog("xlsx")).pack(pady=5)
@@ -254,7 +233,7 @@ def main():
     threading.Thread(target=run_flask, daemon=True).start()
 
     root = tk.Tk()
-    root.title("コメント表示（Web版）")
+    root.title("コメント表示")
     root.overrideredirect(True)
     screen = get_monitors()[0]
     w, h = screen.width // 4, screen.height
@@ -272,13 +251,11 @@ def main():
     html_frame = HtmlFrame(wrapper, horizontal_scrollbar="auto", vertical_scrollbar="auto")
     html_frame.pack(expand=True, fill="both")
 
-    base_path = os.path.dirname(__file__)
-    with open(os.path.join(base_path, "bubble.html"), encoding="utf-8") as f:
+    with open("bubble.html", encoding="utf-8") as f:
         bubble_html = f.read()
 
     line_height = 40
     max_comments = h // line_height
-
     last_html = [""]
 
     def update_comments():
@@ -302,7 +279,6 @@ def main():
             for msg in messages
         )
         full_html = bubble_html.replace("</body>", f"{body_content}\n</body>")
-
         if full_html != last_html[0]:
             html_frame.load_html(full_html)
             last_html[0] = full_html
