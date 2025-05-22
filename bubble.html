@@ -53,10 +53,29 @@
             border-width: 0 12px 12px 12px;
             border-style: solid;
             border-color: transparent transparent #e0f7fa transparent;
-            
         }
+        body {
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
     </style>
 </head>
 <body>
+    <div id="scroll-container">
+    </div>
+
+    <style>
+        #scroll-container {
+            max-height: 100vh;
+            overflow-y: scroll;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
 </body>
 </html>
