@@ -6,7 +6,7 @@ from tkinterweb import HtmlFrame
 import os
 import threading
 import queue
-from flask import Flask, request, render_template, render_template_string, redirect, url_for, send_file
+from flask import Flask, request, render_template, redirect, url_for, send_file
 from flask_socketio import SocketIO
 import pandas as pd
 import io
@@ -104,8 +104,6 @@ def create_menu_window(switch_display_callback):
         messages.clear()
         message_log.clear()
 
-    #buttonの大きさ変更しといて
-
     tk.Button(menu_root, text="コメント履歴クリア(デバッグ)", command=clear_comments).pack(pady=5)
     tk.Button(menu_root, text="CSV形式で保存", command=lambda: export_file_dialog("csv")).pack(pady=5)
     tk.Button(menu_root, text="Excel形式で保存", command=lambda: export_file_dialog("xlsx")).pack(pady=5)
@@ -156,9 +154,17 @@ def main():
 
         body_content = "\n".join(
             f'''
-                <div class="message-block">
-                    <div class="username">{msg.get("name")}</div>
-                    <div class="bubble">{msg["text"]}</div>
+                <div class="comment-wrapper">
+                    <div class="shadow-box"></div>
+                        <div class="comment-box">
+                        <div class="name-label">{msg.get("name")}</div>
+                        <div class="comment-name-time">
+                            <span>　</span>
+                            <span style="font-weight: normal; color: #666;">12:34</span>
+                        </div>
+                    <div class="comment-text">{msg["text"]}</div>
+                        <div class="like"><!--ここにリアクションを表示--></div>
+                    </div>
                 </div>
             '''
             for msg in messages
