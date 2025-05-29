@@ -13,6 +13,7 @@ import io
 from datetime import datetime
 import tkinter.filedialog as filedialog
 from uuid import uuid4
+import re
 
 # ==== Flask + SocketIO ====
 #うまくいかず
@@ -32,6 +33,18 @@ def form():
 def comment():
     msg = request.form.get("msg", "")
     name = request.form.get("name", "名無し")
+
+    html_tag_pattern = re.compile(r"<[^>]+>")
+
+    # HTMLタグが含まれていたらアラートを表示して前のページに戻す
+    if html_tag_pattern.search(msg) or html_tag_pattern.search(name):
+        return '''
+        <script>
+            alert("HTMLタグは禁止されています。");
+            window.history.back();
+        </script>
+        ''', 400
+
     if msg and name:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         entry = {"name": name, "text": msg, "time": now}
@@ -104,7 +117,9 @@ def create_menu_window(switch_display_callback):
         messages.clear()
         message_log.clear()
 
-    tk.Button(menu_root, text="コメント履歴クリア(デバッグ)", command=clear_comments).pack(pady=5)
+    #消す
+    #tk.Button(menu_root, text="コメント履歴クリア(デバッグ)", command=clear_comments).pack(pady=5)
+    
     tk.Button(menu_root, text="CSV形式で保存", command=lambda: export_file_dialog("csv")).pack(pady=5)
     tk.Button(menu_root, text="Excel形式で保存", command=lambda: export_file_dialog("xlsx")).pack(pady=5)
     tk.Button(menu_root, text="表示モニター切り替え", command=switch_display_callback).pack(pady=5)
@@ -160,7 +175,7 @@ def main():
                         <div class="name-label">{msg.get("name")}</div>
                         <div class="comment-name-time">
                             <span>　</span>
-                            <span style="font-weight: normal; color: #666;">12:34</span>
+                            <span style="font-weight: normal; color: #666;">{msg.get("time", "")[11:16]}</span>
                         </div>
                     <div class="comment-text">{msg["text"]}</div>
                         <div class="like"><!--ここにリアクションを表示--></div>
