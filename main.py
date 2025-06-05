@@ -1,9 +1,11 @@
 import tkinter as tk
+import tkinter.messagebox
 import win32gui
 import win32con
 from screeninfo import get_monitors
 from tkinterweb import HtmlFrame
 import os
+#from playsound import playsound
 import threading
 import queue
 from flask import Flask, request, render_template, redirect, url_for, send_file
@@ -16,7 +18,6 @@ from uuid import uuid4
 import re
 
 # ==== Flask + SocketIO ====
-#うまくいかず
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
@@ -24,6 +25,8 @@ message_queue = queue.Queue()
 message_log = []
 messages = []
 server_session_id = str(uuid4())
+
+unsaved_changes = False  # ファイルを保存したのか否か
 
 @app.route("/")
 def form():
@@ -35,8 +38,6 @@ def comment():
     name = request.form.get("name", "名無し")
 
     html_tag_pattern = re.compile(r"<[^>]+>")
-
-    # HTMLタグが含まれていたらアラートを表示して前のページに戻す
     if html_tag_pattern.search(msg) or html_tag_pattern.search(name):
         return '''
         <script>
@@ -51,6 +52,8 @@ def comment():
         message_queue.put(entry)
         message_log.append(entry)
         socketio.emit("new_comment", entry)
+        global unsaved_changes
+        unsaved_changes = True #新規メッセージがあるたびにTrueにし、警告を出す
         return redirect(url_for("form"))
     return "エラー", 400
 
@@ -92,7 +95,7 @@ def set_always_on_top(hwnd):
     win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
                           win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
 
-def create_menu_window(switch_display_callback):
+def create_menu_window(switch_display_callback, root):
     menu_root = tk.Toplevel()
     menu_root.title("コントロールメニュー")
     menu_root.geometry("350x350")
@@ -110,20 +113,22 @@ def create_menu_window(switch_display_callback):
                     df.to_csv(filepath, index=False, encoding="utf-8-sig")
                 else:
                     df.to_excel(filepath, index=False)
+                global unsaved_changes
+                unsaved_changes = False
             except Exception as e:
                 print(f"保存エラー: {e}")
 
-    def clear_comments():
-        messages.clear()
-        message_log.clear()
+    def confirm_exit():
+        if unsaved_changes:
+            confirm = tk.messagebox.askyesno("確認", "保存していない履歴は削除されてしまいます。よろしいですか？")
+            if not confirm:
+                return
+        root.destroy()
 
-    #消す
-    #tk.Button(menu_root, text="コメント履歴クリア(デバッグ)", command=clear_comments).pack(pady=5)
-    
+    tk.Button(menu_root, text="表示モニター切り替え", command=switch_display_callback).pack(pady=5)
     tk.Button(menu_root, text="CSV形式で保存", command=lambda: export_file_dialog("csv")).pack(pady=5)
     tk.Button(menu_root, text="Excel形式で保存", command=lambda: export_file_dialog("xlsx")).pack(pady=5)
-    tk.Button(menu_root, text="表示モニター切り替え", command=switch_display_callback).pack(pady=5)
-    tk.Button(menu_root, text="アプリを終了", command=lambda: os._exit(0)).pack(pady=10)
+    tk.Button(menu_root, text="アプリを終了", command=confirm_exit).pack(pady=10)
 
 def main():
     threading.Thread(target=run_flask, daemon=True).start()
@@ -133,7 +138,7 @@ def main():
     root.overrideredirect(True)
 
     monitors = get_monitors()
-    current_monitor = [0]  # リストで保持して切り替え可能に
+    current_monitor = [0]
 
     def update_monitor_position():
         screen = monitors[current_monitor[0]]
@@ -190,7 +195,6 @@ def main():
             html_frame.load_html(full_html)
             last_html[0] = full_html
 
-            #一番下へ強制スクロール
             def scroll_to_bottom():
                 html_frame.yview_moveto(1.0)
 
@@ -198,12 +202,11 @@ def main():
 
         root.after(1000, update_comments)
 
-
     def switch_display():
         current_monitor[0] = (current_monitor[0] + 1) % len(monitors)
         update_monitor_position()
 
-    create_menu_window(switch_display)
+    create_menu_window(switch_display, root)
     update_comments()
     root.mainloop()
 
