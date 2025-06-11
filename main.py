@@ -4,8 +4,6 @@ import win32gui
 import win32con
 from screeninfo import get_monitors
 from tkinterweb import HtmlFrame
-import os
-#from playsound import playsound
 import threading
 import queue
 from flask import Flask, request, render_template, redirect, url_for, send_file
@@ -16,6 +14,8 @@ from datetime import datetime
 import tkinter.filedialog as filedialog
 from uuid import uuid4
 import re
+import os
+from playsound3 import playsound
 
 # ==== Flask + SocketIO ====
 app = Flask(__name__)
@@ -26,7 +26,7 @@ message_log = []
 messages = []
 server_session_id = str(uuid4())
 
-unsaved_changes = False  # ファイルを保存したのか否か
+unsaved_changes = False
 
 @app.route("/")
 def form():
@@ -53,7 +53,7 @@ def comment():
         message_log.append(entry)
         socketio.emit("new_comment", entry)
         global unsaved_changes
-        unsaved_changes = True #新規メッセージがあるたびにTrueにし、警告を出す
+        unsaved_changes = True
         return redirect(url_for("form"))
     return "エラー", 400
 
@@ -130,6 +130,14 @@ def create_menu_window(switch_display_callback, root):
     tk.Button(menu_root, text="Excel形式で保存", command=lambda: export_file_dialog("xlsx")).pack(pady=5)
     tk.Button(menu_root, text="アプリを終了", command=confirm_exit).pack(pady=10)
 
+SOUND_PATH = os.path.join(os.path.dirname(__file__), "sounds/samplesound.mp3")
+
+def play_notification_sound():
+    try:
+        playsound(SOUND_PATH)
+    except Exception as e:
+        print(f"音声再生エラー: {e}")
+
 def main():
     threading.Thread(target=run_flask, daemon=True).start()
 
@@ -165,12 +173,18 @@ def main():
     last_html = [""]
 
     def update_comments():
+        new_message_added = False
         try:
             while True:
                 new_entry = message_queue.get_nowait()
                 messages.append(new_entry)
+                new_message_added = True
         except queue.Empty:
             pass
+
+        if new_message_added:
+            # 新しいメッセージが来たら音を鳴らす（非同期）
+            threading.Thread(target=play_notification_sound, daemon=True).start()
 
         body_content = "\n".join(
             f'''
@@ -194,11 +208,7 @@ def main():
         if full_html != last_html[0]:
             html_frame.load_html(full_html)
             last_html[0] = full_html
-
-            def scroll_to_bottom():
-                html_frame.yview_moveto(1.0)
-
-            root.after(200, scroll_to_bottom)
+            root.after(200, lambda: html_frame.yview_moveto(1.0))
 
         root.after(1000, update_comments)
 

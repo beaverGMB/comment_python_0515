@@ -149,8 +149,8 @@
         
         <h2>コメント履歴</h2>
         <ul>
-            {% for msg in messages %}
-                <li><strong>{{ msg.name }}</strong>: {{ msg.text }}</li>
+            {% for msg in messages|reverse %}
+        <li><strong>{{ msg.name }}</strong>: {{ msg.text }}</li>
             {% endfor %}
         </ul>
     </div>
