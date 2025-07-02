@@ -30,7 +30,8 @@ unsaved_changes = False
 
 @app.route("/")
 def form():
-    return render_template("web_index.html", messages=message_log, server_session_id=server_session_id)
+    # 修正：Web側でも新しい順に表示
+    return render_template("web_index.html", messages=list(reversed(message_log)), server_session_id=server_session_id)
 
 @app.route("/comment", methods=["POST"])
 def comment():
@@ -183,7 +184,6 @@ def main():
             pass
 
         if new_message_added:
-            # 新しいメッセージが来たら音を鳴らす（非同期）
             threading.Thread(target=play_notification_sound, daemon=True).start()
 
         body_content = "\n".join(
@@ -201,14 +201,14 @@ def main():
                     </div>
                 </div>
             '''
-            for msg in messages
+            for msg in reversed(messages)
         )
         full_html = bubble_html.replace("</body>", f"{body_content}</body>")
 
         if full_html != last_html[0]:
             html_frame.load_html(full_html)
             last_html[0] = full_html
-            root.after(200, lambda: html_frame.yview_moveto(1.0))
+            root.after(200, lambda: html_frame.yview_moveto(0.0))  # 一番上へスクロール
 
         root.after(1000, update_comments)
 
