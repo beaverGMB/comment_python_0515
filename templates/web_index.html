@@ -2,199 +2,317 @@
 <html lang="ja">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>コメント送信フォーム</title>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>コメント送信フォーム</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: sans-serif;
-            background-color: #f9f9f9;
-            overflow: hidden;
-        }
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+      background-color: #66d0f0;
+      overflow: hidden;
+    }
 
-        #commentSection {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
+    .logo {
+      display: block;
+      max-width: 80%;
+      height: auto;
+      margin: 0 auto 20px;
+    }
 
-        #commentListWrapper {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            box-sizing: border-box;
-        }
+    #nameEntry {
+      display: none;
+      padding: 40px 20px;
+      text-align: center;
 
-        ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-        }
+      /* 横切れ防止のため幅調整 */
+      width: 320px;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
 
-        li {
-            background: #fff;
-            padding: 0.5em;
-            margin-bottom: 0.5em;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
+    #nameEntry input[type="text"] {
+      width: 100%;
+      max-width: 300px;
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: 1px solid #aaa;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
 
-        .form-wrapper {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: #ffffff;
-            padding: 10px;
-            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-            border-top: 1px solid #ccc;
-            box-sizing: border-box;
-        }
+    #nameEntry button {
+      width: 100%;
+      max-width: 200px;
+      background-color: #e6007e;
+      color: white;
+      font-weight: bold;
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-sizing: border-box;
+      margin: 0 auto;
+      display: block;
+    }
 
-        input[type="text"],
-        select,
-        button {
-            font-size: 18px;
-            padding: 10px;
-            margin-top: 6px;
-            margin-bottom: 10px;
-            width: 100%;
-            box-sizing: border-box;
-        }
+    #commentSection {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-        h2 {
-            font-size: 1.2em;
-            margin: 0 0 10px 0;
-        }
-    </style>
+    #commentListWrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      box-sizing: border-box;
+    }
 
-    <script>
-        const socket = io();
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
 
-        socket.on("new_comment", function (data) {
-            const commentList = document.querySelector("ul");
-            const li = document.createElement("li");
-            li.innerHTML = `<strong>${data.name}</strong>: ${data.text}`;
-            commentList.appendChild(li);
+    li {
+      background: #fff;
+      padding: 0.5em;
+      margin-bottom: 0.5em;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      word-break: break-word;
+    }
 
-            // 一番下まで自動スクロール
-            const wrapper = document.getElementById("commentListWrapper");
-            wrapper.scrollTop = wrapper.scrollHeight;
-        });
+    .form-wrapper {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: white;
+      border-radius: 20px 20px 0 0;
+      padding: 15px;
+      border: 2px solid #ccc;
+      box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+    }
 
-        function getCookie(name) {
-            let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-            if (match) return decodeURIComponent(match[2]);
-            return null;
-        }
+    h2 {
+      font-size: 1.5em;
+      text-align: center;
+      color: hotpink;
+      margin: 0 0 10px;
+      font-weight: bold;
+      text-shadow: 1px 1px white;
+    }
 
-        function setCookie(name, value, days) {
-            let expires = "";
-            if (days) {
-                let d = new Date();
-                d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-                expires = "; expires=" + d.toUTCString();
-            }
-            document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
-        }
+    label {
+      display: block;
+      font-weight: bold;
+      color: #e6005c;
+      margin-bottom: 5px;
+    }
 
-        function saveNameAndReload() {
-            const nameInput = document.getElementById("nameInput").value.trim();
-            if (nameInput !== "") {
-                setCookie("username", nameInput, 7);
-                setCookie("session_id", "{{ server_session_id }}", 7);
-                location.reload();
-            } else {
-                alert("名前を入力してください。");
-            }
-        }
+    #templates {
+      width: 100%;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+      margin-bottom: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
 
-        function setTemplateText(value) {
-            document.getElementById('msg').value = value;
-        }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
 
-        function loadUsernameToForm() {
-            const name = getCookie("username");
-            const session = getCookie("session_id");
-            if (!name || session !== "{{ server_session_id }}") {
-                document.getElementById("nameEntry").style.display = "block";
-                document.getElementById("commentSection").style.display = "none";
-            } else {
-                document.getElementById("nameEntry").style.display = "none";
-                document.getElementById("commentSection").style.display = "flex";
-                document.getElementById("hiddenName").value = name;
+    input[type="text"] {
+      flex: 1 1 60%;
+      min-width: 0;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+      box-sizing: border-box;
+    }
 
-                // 初回スクロール
-                setTimeout(() => {
-                    const wrapper = document.getElementById("commentListWrapper");
-                    wrapper.scrollTop = wrapper.scrollHeight;
-                }, 100);
-            }
+    button[type="submit"] {
+      flex: 0 0 auto;
+      background-color: #e6007e;
+      color: white;
+      font-weight: bold;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
 
-            adjustPaddingForFormHeight(); // ページ読み込み時にも
-        }
+    button[type="submit"]::after {
+      content: "✈️";
+      margin-left: 5px;
+    }
 
-        function adjustPaddingForFormHeight() {
-            const form = document.querySelector(".form-wrapper");
-            const wrapper = document.getElementById("commentListWrapper");
+    /* スマホ向けの調整 */
+    @media screen and (max-width: 600px) {
+      form {
+        flex-direction: column;
+      }
 
-            if (form && wrapper) {
-                const formHeight = form.offsetHeight;
-                wrapper.style.paddingBottom = formHeight + "px";
-            }
-        }
+      input[type="text"],
+      button[type="submit"] {
+        width: 100%;
+      }
 
-        window.addEventListener("load", loadUsernameToForm);
-        window.addEventListener("resize", adjustPaddingForFormHeight);
-    </script>
+      h2 {
+        font-size: 1.2em;
+      }
+
+      /* ニックネーム入力部分の幅も狭めて対応 */
+      #nameEntry {
+        width: 90%;
+        padding: 20px 10px;
+      }
+
+      #nameEntry input[type="text"],
+      #nameEntry button {
+        max-width: 100%;
+        width: 100%;
+      }
+    }
+  </style>
+
+  <script>
+    const socket = io();
+
+    socket.on("new_comment", function (data) {
+      const commentList = document.querySelector("ul");
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${data.name}</strong>: ${data.text}`;
+      commentList.appendChild(li);
+
+      const wrapper = document.getElementById("commentListWrapper");
+      wrapper.scrollTop = wrapper.scrollHeight;
+    });
+
+    function getCookie(name) {
+      let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      if (match) return decodeURIComponent(match[2]);
+      return null;
+    }
+
+    function setCookie(name, value, days) {
+      let expires = "";
+      if (days) {
+        let d = new Date();
+        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + d.toUTCString();
+      }
+      document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
+    }
+
+    function saveNameAndReload() {
+      const nameInput = document.getElementById("nameInput").value.trim();
+      if (nameInput !== "") {
+        setCookie("username", nameInput, 7);
+        setCookie("session_id", "{{ server_session_id }}", 7);
+        location.reload();
+      } else {
+        alert("名前を入力してください。");
+      }
+    }
+
+    function setTemplateText(value) {
+      document.getElementById('msg').value = value;
+    }
+
+    function loadUsernameToForm() {
+      const name = getCookie("username");
+      const session = getCookie("session_id");
+      if (!name || session !== "{{ server_session_id }}") {
+        document.getElementById("nameEntry").style.display = "block";
+        document.getElementById("commentSection").style.display = "none";
+      } else {
+        document.getElementById("nameEntry").style.display = "none";
+        document.getElementById("commentSection").style.display = "flex";
+        document.getElementById("hiddenName").value = name;
+
+        setTimeout(() => {
+          const wrapper = document.getElementById("commentListWrapper");
+          wrapper.scrollTop = wrapper.scrollHeight;
+        }, 100);
+      }
+
+      adjustPaddingForFormHeight();
+    }
+
+    function adjustPaddingForFormHeight() {
+      const form = document.querySelector(".form-wrapper");
+      const wrapper = document.getElementById("commentListWrapper");
+
+      if (form && wrapper) {
+        const formHeight = form.offsetHeight;
+        wrapper.style.paddingBottom = formHeight + "px";
+      }
+    }
+
+    window.addEventListener("load", loadUsernameToForm);
+    window.addEventListener("resize", adjustPaddingForFormHeight);
+  </script>
 </head>
 
 <body>
-    <!-- 名前入力画面 -->
-    <div id="nameEntry" style="display:none; padding: 20px;">
-        <h2>名前を入力してください</h2>
-        <input type="text" id="nameInput" placeholder="名前を入力">
-        <button onclick="saveNameAndReload()">OK</button>
+  <!-- 名前入力画面 -->
+  <div id="nameEntry">
+    <img src="{{ url_for('static', filename='images/BEAVERロゴ.png') }}" alt="BEAVER Logo" class="logo" />
+    <h2>名前を入力してください</h2>
+    <input type="text" id="nameInput" placeholder="名前を入力" />
+    <button onclick="saveNameAndReload()">OK</button>
+  </div>
+
+  <!-- コメントセクション -->
+  <div id="commentSection">
+    <div id="commentListWrapper">
+      <ul>
+        {% for msg in messages|reverse %}
+        <li><strong>{{ msg.name }}</strong>: {{ msg.text }}</li>
+        {% endfor %}
+      </ul>
     </div>
 
-    <!-- コメントセクション -->
-    <div id="commentSection">
-        <div id="commentListWrapper">
-            <h2>コメント履歴</h2>
-            <ul>
-                {% for msg in messages|reverse %}
-                <li><strong>{{ msg.name }}</strong>: {{ msg.text }}</li>
-                {% endfor %}
-            </ul>
-        </div>
+    <!-- 送信フォーム -->
+    <div class="form-wrapper">
+      <h2>comment</h2>
+      <label for="templates">定型文を選択</label>
+      <select id="templates" onchange="setTemplateText(this.value)">
+        <option value="">-------- 定型文を選択 --------</option>
+        <option value="おはようございます">おはようございます</option>
+        <option value="こんにちは">こんにちは</option>
+        <option value="よろしくお願いします">よろしくお願いします</option>
+        <option value="ありがとうございました">ありがとうございました</option>
+        <option value="お疲れさまでした">お疲れさまでした</option>
+        <option value="頑張れー">頑張れー</option>
+      </select>
 
-        <!-- 送信フォーム -->
-        <div class="form-wrapper">
-            <label for="templates">定型文から選ぶ：</label>
-            <select id="templates" onchange="setTemplateText(this.value)">
-                <option value="">-------- 定型文を選択 --------</option>
-                <option value="おはようございます">おはようございます</option>
-                <option value="こんにちは">こんにちは</option>
-                <option value="よろしくお願いします">よろしくお願いします</option>
-                <option value="ありがとうございました">ありがとうございました</option>
-                <option value="お疲れさまでした">お疲れさまでした</option>
-                <option value="頑張れー">頑張れー</option>
-            </select>
-
-            <form method="POST" action="/comment">
-                <input type="hidden" name="name" id="hiddenName">
-                <input type="text" name="msg" id="msg" required placeholder="コメントを入力">
-                <button type="submit">送信</button>
-            </form>
-        </div>
+      <form method="POST" action="/comment">
+        <input type="hidden" name="name" id="hiddenName" />
+        <input type="text" name="msg" id="msg" required placeholder="コメントの内容を入力..." />
+        <button type="submit">送信</button>
+      </form>
     </div>
+  </div>
 </body>
 
 </html>

@@ -19,7 +19,7 @@ from playsound3 import playsound
 
 # ==== Flask + SocketIO ====
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 message_queue = queue.Queue()
 message_log = []
@@ -30,7 +30,6 @@ unsaved_changes = False
 
 @app.route("/")
 def form():
-    # 修正：Web側でも新しい順に表示
     return render_template("web_index.html", messages=list(reversed(message_log)), server_session_id=server_session_id)
 
 @app.route("/comment", methods=["POST"])
