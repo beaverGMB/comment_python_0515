@@ -36,9 +36,10 @@ def form():
 def comment():
     msg = request.form.get("msg", "")
     name = request.form.get("name", "名無し")
+    real_name = request.form.get("real_name", "")
 
     html_tag_pattern = re.compile(r"<[^>]+>")
-    if html_tag_pattern.search(msg) or html_tag_pattern.search(name):
+    if html_tag_pattern.search(msg) or html_tag_pattern.search(name) or html_tag_pattern.search(real_name):
         return '''
         <script>
             alert("HTMLタグは禁止されています。");
@@ -48,7 +49,7 @@ def comment():
 
     if msg and name:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        entry = {"name": name, "text": msg, "time": now}
+        entry = {"name": name, "real_name": real_name, "text": msg, "time": now}
         message_queue.put(entry)
         message_log.append(entry)
         socketio.emit("new_comment", entry)
@@ -64,7 +65,12 @@ def download_file():
 
     file_format = request.args.get("format", "xlsx").lower()
     df = pd.DataFrame(message_log)
-    df.rename(columns={"name": "名前", "text": "コメント", "time": "時刻"}, inplace=True)
+    df.rename(columns={
+        "real_name": "本名",
+        "name": "名前",
+        "text": "コメント",
+        "time": "時刻"
+    }, inplace=True)
     output = io.BytesIO()
 
     if file_format == "csv":
@@ -103,7 +109,12 @@ def create_menu_window(switch_display_callback, root):
 
     def export_file_dialog(format_type):
         df = pd.DataFrame(message_log)
-        df.rename(columns={"name": "名前", "text": "コメント", "time": "時刻"}, inplace=True)
+        df.rename(columns={
+            "real_name": "本名",
+            "name": "名前",
+            "text": "コメント",
+            "time": "時刻"
+        }, inplace=True)
         filetypes = [("Excelファイル", "*.xlsx")] if format_type == "xlsx" else [("CSVファイル", "*.csv")]
         def_ext = ".xlsx" if format_type == "xlsx" else ".csv"
         filepath = filedialog.asksaveasfilename(defaultextension=def_ext, filetypes=filetypes)
@@ -207,7 +218,7 @@ def main():
         if full_html != last_html[0]:
             html_frame.load_html(full_html)
             last_html[0] = full_html
-            root.after(200, lambda: html_frame.yview_moveto(0.0))  # 一番上へスクロール
+            root.after(200, lambda: html_frame.yview_moveto(0.0))
 
         root.after(1000, update_comments)
 

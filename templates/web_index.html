@@ -20,7 +20,7 @@
 
     .logo {
       display: block;
-      max-width: 80%;
+      max-width: 100%;
       height: auto;
       margin: 0 auto 20px;
     }
@@ -176,6 +176,16 @@
       transform: translateY(-1px);
     }
 
+    .name_label{
+      display: block;
+      text-align: left;
+      margin: 10px auto 5px;
+      width: 300px;
+      font-weight: bold;
+      color: #e4446f;
+      font-size: 18px;
+    }
+
     /* スマホ向けの調整 */
     @media screen and (max-width: 600px) {
       form {
@@ -236,13 +246,17 @@
 
     function saveNameAndReload() {
       const nameInput = document.getElementById("nameInput").value.trim();
-      if (nameInput !== "") {
-        setCookie("username", nameInput, 7);
-        setCookie("session_id", "{{ server_session_id }}", 7);
-        location.reload();
-      } else {
-        alert("名前を入力してください。");
+      const realNameInput = document.getElementById("realNameInput").value.trim();
+
+      if (nameInput === "" || realNameInput === "") {
+        alert("ニックネームと本名を入力してください。");
+        return;
       }
+
+      setCookie("username", nameInput, 7);
+      setCookie("realname", realNameInput, 7);
+      setCookie("session_id", "{{ server_session_id }}", 7);
+      location.reload();
     }
 
     function setTemplateText(value) {
@@ -251,14 +265,17 @@
 
     function loadUsernameToForm() {
       const name = getCookie("username");
+      const realName = getCookie("realname");
       const session = getCookie("session_id");
-      if (!name || session !== "{{ server_session_id }}") {
+
+      if (!name || !realName || session !== "{{ server_session_id }}") {
         document.getElementById("nameEntry").style.display = "block";
         document.getElementById("commentSection").style.display = "none";
       } else {
         document.getElementById("nameEntry").style.display = "none";
         document.getElementById("commentSection").style.display = "flex";
         document.getElementById("hiddenName").value = name;
+        document.getElementById("hiddenRealName").value = realName;
 
         setTimeout(() => {
           const wrapper = document.getElementById("commentListWrapper");
@@ -287,9 +304,10 @@
 <body>
   <!-- 名前入力画面 -->
   <div id="nameEntry">
-    <img src="{{ url_for('static', filename='images/BEAVERロゴ.png') }}" alt="BEAVER Logo" class="logo" />
-    <h2>名前を入力してください</h2>
-    <input type="text" id="nameInput" placeholder="名前を入力" />
+    <img src="{{ url_for('static', filename='images/BEAVERlogo.png') }}" alt="BEAVER Logo" class="logo" />
+    <h2 class="name_label">名前を入力してください</h2>
+    <input type="text" id="nameInput" placeholder="ニックネーム（表示用の名前）" />
+    <input type="text" id="realNameInput" placeholder="本名（記録用）" />
     <button onclick="saveNameAndReload()">OK</button>
   </div>
 
@@ -319,6 +337,7 @@
 
       <form method="POST" action="/comment">
         <input type="hidden" name="name" id="hiddenName" />
+        <input type="hidden" name="real_name" id="hiddenRealName" />
         <input type="text" name="msg" id="msg" required placeholder="コメントの内容を入力..." />
         <button type="submit">送信</button>
       </form>
