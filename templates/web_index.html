@@ -50,7 +50,7 @@
     #nameEntry button {
       width: 100%;
       max-width: 200px;
-      background-color: #e6007e;
+      background-color: #e4446f;
       color: white;
       font-weight: bold;
       padding: 10px;
@@ -61,6 +61,11 @@
       box-sizing: border-box;
       margin: 0 auto;
       display: block;
+      box-shadow: 3px 3px 0px #2b3a4b;
+    }
+
+    #nameEntry button:hover{
+      transform: translateY(-1px);
     }
 
     #commentSection {
@@ -107,16 +112,16 @@
     h2 {
       font-size: 1.5em;
       text-align: center;
-      color: hotpink;
+      color: #e4446f;
       margin: 0 0 10px;
       font-weight: bold;
-      text-shadow: 1px 1px white;
+      /*text-shadow: 1px 1px white;*/
     }
 
     label {
       display: block;
       font-weight: bold;
-      color: #e6005c;
+      color: #e4446f;
       margin-bottom: 5px;
     }
 
@@ -144,11 +149,12 @@
       border-radius: 5px;
       border: 1px solid #aaa;
       box-sizing: border-box;
+      box-shadow: 3px 3px 0px #2b3a4b;
     }
 
     button[type="submit"] {
       flex: 0 0 auto;
-      background-color: #e6007e;
+      background-color: #e4446f;
       color: white;
       font-weight: bold;
       padding: 10px 15px;
@@ -158,11 +164,16 @@
       cursor: pointer;
       display: flex;
       align-items: center;
+      box-shadow: 3px 3px 0px #2b3a4b;
     }
 
     button[type="submit"]::after {
       content: "✈️";
       margin-left: 5px;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
     }
 
     /* スマホ向けの調整 */
