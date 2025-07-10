@@ -3,3 +3,5 @@
 /dist
 /build
 /sounds
+/.venv
+/b.txt
