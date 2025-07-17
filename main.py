@@ -10,6 +10,7 @@ import subprocess
 import atexit
 from datetime import datetime
 from uuid import uuid4
+import html
 
 # ========== GUI / Windows 系 ==========
 import tkinter as tk
@@ -19,7 +20,7 @@ import win32gui
 import win32con
 from screeninfo import get_monitors
 from tkinterweb import HtmlFrame
-from playsound import playsound
+# from playsound import playsound
 
 # ========== Web / データ ==========
 from flask import Flask, request, render_template, redirect, url_for, send_file
@@ -49,6 +50,9 @@ message_log: list[dict] = []          # 保存用
 messages: list[dict] = []             # 表示用
 unsaved_changes = False
 SERVER_SESSION_ID = str(uuid4())
+
+# 表示上限
+DISPLAY_LIMIT = 30
 
 # ------------------------------------------------------------
 # Tailscale Funnel
@@ -85,12 +89,11 @@ def form():
     )
 
 @app.route("/comment", methods=["POST"])
-def comment():  # noqa: D401
+def comment():
     msg = request.form.get("msg", "")
     name = request.form.get("name", "名無し")
     real_name = request.form.get("real_name", "")
 
-    # HTML タグ禁止
     if re.search(r"<[^>]+>", msg + name + real_name):
         return (
             "<script>alert('HTMLタグは禁止です');window.history.back();</script>",
@@ -169,7 +172,8 @@ def set_always_on_top(hwnd):
 
 def play_notification_sound():
     try:
-        playsound(SOUND_PATH)
+        # playsound(SOUND_PATH)
+        pass
     except Exception as e:
         print(f"[WARN] 音声再生失敗: {e}")
 
@@ -215,11 +219,9 @@ def create_menu_window(switch_display_callback, root):
 # メイン処理
 # ------------------------------------------------------------
 def main():
-    # Flask 起動
     threading.Thread(target=run_flask, daemon=True).start()
     start_tailscale_funnel()
 
-    # Tkinter ウィンドウ
     root = tk.Tk()
     root.title("コメント表示")
     root.overrideredirect(True)
@@ -230,8 +232,11 @@ def main():
     def update_monitor_position():
         scr = monitors[current_monitor[0]]
         w, h = scr.width // 4, scr.height
-        x, y = scr.x + scr.width - w, scr.y
-        root.geometry(f"{w}x{h}+{x}+{y}")
+        scrollbar_width = 20
+        # スクロールバー幅を考慮し横幅拡張、表示位置調整
+        root.geometry(f"{w + scrollbar_width}x{h}+{scr.x + scr.width - (w + scrollbar_width)}+{scr.y}")
+        # 横幅固定、縦は可変
+        root.resizable(False, True)
 
     update_monitor_position()
     root.configure(bg="#fefefe")
@@ -242,10 +247,10 @@ def main():
     wrapper = tk.Frame(root, bg="#fefefe")
     wrapper.pack(expand=True, fill="both")
 
-    html_frame = HtmlFrame(wrapper, horizontal_scrollbar="auto", vertical_scrollbar="auto")
+    # 横スクロールバーなし、縦のみ自動表示
+    html_frame = HtmlFrame(wrapper, horizontal_scrollbar="none", vertical_scrollbar="auto")
     html_frame.pack(expand=True, fill="both")
 
-    # bubble.html 読み込み
     with open(BUBBLE_HTML_PATH, encoding="utf-8") as fp:
         bubble_html = fp.read()
     last_html = [""]
@@ -264,27 +269,30 @@ def main():
 
         body = "\n".join(
             f"""
-            <div class="comment-wrapper">
-              <div class="shadow-box"></div>
-              <div class="comment-box">
-                <div class="name-label">{m['name']}</div>
-                <div class="comment-name-time">
+            <div class=\"comment-wrapper\">
+              <div class=\"shadow-box\"></div>
+              <div class=\"comment-box\">
+                <div class=\"name-label\">{html.escape(m['name'])}</div>
+                <div class=\"comment-name-time\">
                   <span>　</span>
                   <span style='font-weight:normal;color:#666;'>{m['time'][11:16]}</span>
                 </div>
-                <div class="comment-text">{m['text']}</div>
-                <div class="like"></div>
+                <div class=\"comment-text\">{html.escape(m['text'])}</div>
+                <div class=\"like\"></div>
               </div>
             </div>
             """
-            for m in reversed(messages)   # 最新を上
+            for m in reversed(messages[-DISPLAY_LIMIT:])
         )
+
         full_html = bubble_html.replace("</body>", f"{body}</body>")
 
         if full_html != last_html[0]:
-            html_frame.load_html(full_html)
-            last_html[0] = full_html
-            root.after(200, lambda: html_frame.yview_moveto(0.0))
+            try:
+                html_frame.load_html(full_html)
+                last_html[0] = full_html
+            except Exception as e:
+                print(f"[WARN] HTML表示エラー: {e}")
 
         root.after(1000, update_comments)
 

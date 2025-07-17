@@ -29,8 +29,6 @@
       display: none;
       padding: 40px 20px;
       text-align: center;
-
-      /* 横切れ防止のため幅調整 */
       width: 320px;
       margin: 0 auto;
       box-sizing: border-box;
@@ -64,7 +62,7 @@
       box-shadow: 3px 3px 0px #2b3a4b;
     }
 
-    #nameEntry button:hover{
+    #nameEntry button:hover {
       transform: translateY(-1px);
     }
 
@@ -115,7 +113,6 @@
       color: #e4446f;
       margin: 0 0 10px;
       font-weight: bold;
-      /*text-shadow: 1px 1px white;*/
     }
 
     label {
@@ -176,7 +173,7 @@
       transform: translateY(-1px);
     }
 
-    .name_label{
+    .name_label {
       display: block;
       text-align: left;
       margin: 10px auto 5px;
@@ -186,7 +183,6 @@
       font-size: 18px;
     }
 
-    /* スマホ向けの調整 */
     @media screen and (max-width: 600px) {
       form {
         flex-direction: column;
@@ -201,7 +197,6 @@
         font-size: 1.2em;
       }
 
-      /* ニックネーム入力部分の幅も狭めて対応 */
       #nameEntry {
         width: 90%;
         padding: 20px 10px;
@@ -224,6 +219,7 @@
       li.innerHTML = `<strong>${data.name}</strong>: ${data.text}`;
       commentList.appendChild(li);
 
+      // ⬇️ コメント追加時に下へスクロール
       const wrapper = document.getElementById("commentListWrapper");
       wrapper.scrollTop = wrapper.scrollHeight;
     });
@@ -277,6 +273,7 @@
         document.getElementById("hiddenName").value = name;
         document.getElementById("hiddenRealName").value = realName;
 
+        // ⬇️ 初回表示時にスクロール
         setTimeout(() => {
           const wrapper = document.getElementById("commentListWrapper");
           wrapper.scrollTop = wrapper.scrollHeight;
@@ -302,7 +299,6 @@
 </head>
 
 <body>
-  <!-- 名前入力画面 -->
   <div id="nameEntry">
     <img src="{{ url_for('static', filename='images/BEAVERlogo.png') }}" alt="BEAVER Logo" class="logo" />
     <h2 class="name_label">名前を入力してください</h2>
@@ -311,7 +307,6 @@
     <button onclick="saveNameAndReload()">OK</button>
   </div>
 
-  <!-- コメントセクション -->
   <div id="commentSection">
     <div id="commentListWrapper">
       <ul>
@@ -321,7 +316,6 @@
       </ul>
     </div>
 
-    <!-- 送信フォーム -->
     <div class="form-wrapper">
       <h2>comment</h2>
       <label for="templates">定型文を選択</label>
